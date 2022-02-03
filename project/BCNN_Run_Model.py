@@ -36,13 +36,17 @@ def test_step(images, labels):
 
 
 class_names = ['Airplane','automobile','Bird','cat','Deer','Dog','Frog','Horse','Ship','Truck']
-thresh = 100
-dataused = [0]
-lam = 1.01
+
+class stats:
+    thresh = 100
+    dataused = [0]
+    lam = 1.01
+
+var = stats()
 
 
 name = 'cifar/var_threshold_t100_l1.01'
-root = ''
+root = '/user/HS223/ad00878/PhD/BCNN_DataOrdering/BCNN_DataOrdering'
 train_path = 'E:/OneDrive/Documents/Uni/PG/Thesis/Code/cifar/cifar/train'
 test_path = 'E:/OneDrive/Documents/Uni/PG/Thesis/Code/cifar/cifar/test' 
 saved_model_path = 'project/saved_model/test1'
@@ -62,8 +66,9 @@ print('Model Loaded')
 
 #evaluation metrics
 optimizer = keras.optimizers.Adam(learning_rate=0.001)
-loss_fn = keras.losses.CategoricalCrossentropy(from_logits=True)
-loss_fn_noreduction = keras.losses.CategoricalCrossentropy(reduction=keras.losses.Reduction.NONE)
+#loss_fn = keras.losses.CategoricalCrossentropy(from_logits=True)
+loss_fn = sf.elbo_loss
+loss_fn_noreduction = sf.elbo_loss_no_reduction
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_acc_metric = keras.metrics.CategoricalAccuracy()
@@ -74,7 +79,7 @@ test_acc_metric = keras.metrics.CategoricalAccuracy()
 print('Setup Complete, Starting training')
 
 #Run the epochs
-epochs = 70
+epochs = 5
 BATCHES = 32
 
 #Tensorboard Setup
@@ -129,7 +134,7 @@ for epoch in range(epochs):
         model.save(saved_model_path)
     
 #save the diffs to seperate file
-np.savetxt('imagecounts/'+name,dataused)
+#np.savetxt('imagecounts/'+name,dataused)
 model.save(saved_model_path)
 
 

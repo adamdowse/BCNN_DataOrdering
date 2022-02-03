@@ -49,7 +49,8 @@ def AlexNet (num_classes):
     ])
     return model
 
-def BCNN (num_classes):
+def BCNN_AlexNet (num_classes):
+
     #2 conv layers and 2 dense layers
     model = tf.keras.Sequential()
     model.add(tfp.layers.Convolution2DFlipout(96, kernel_size=11, padding="same", strides=2,activation='relu'))
@@ -81,3 +82,22 @@ def BCNN (num_classes):
 
     model.add(tfp.python.layers.DenseFlipout(num_classes))
     return model
+
+def BCNN_Original(num_classes):
+    #2 conv layers and 2 dense layers
+    model = tf.keras.Sequential()
+    model.add(tfp.layers.Convolution2DFlipout(32, kernel_size=(3,3), padding="same", strides=20))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Activation('relu'))
+
+    model.add(tfp.python.layers.Convolution2DFlipout(64, kernel_size=(3, 3), padding="same", strides=2))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Activation('relu'))
+
+    model.add(tf.keras.layers.Flatten())
+    model.add(tfp.python.layers.DenseFlipout(512, activation='relu'))
+    model.add(tfp.python.layers.DenseFlipout(num_classes))
+    return model
+
+
+

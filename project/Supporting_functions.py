@@ -93,7 +93,6 @@ def process_path(file_path,diff,include_extras = True):
     else:
         return img, label
 
-
 def collect_train_data(name,df,vars):
     '''
     name = name of acquisition function
@@ -171,6 +170,7 @@ def update_diffs_v2(df,batch,losses):
     return df
 
 def new_diff_col(df):
+
     #move columns across to store in bank
     df['l3'] = df['l2']
     df['l2'] = df['l1']
@@ -182,3 +182,38 @@ def new_diff_col(df):
     print(df['l2'].head())
     print(df['l3'].head())
     return df
+
+@tf.function
+def elbo_loss(labels, logits):
+    loss_en = tf.nn.softmax_cross_entropy_with_logits(labels, logits)
+    loss_kl = tf.keras.losses.KLD(labels, logits)
+    loss = tf.reduce_mean(tf.add(loss_en, loss_kl))
+    return loss
+
+@tf.function
+def elbo_loss_no_reduction(labels, logits):
+    loss_en = tf.nn.softmax_cross_entropy_with_logits(labels, logits)
+    loss_kl = tf.keras.losses.KLD(labels, logits)
+    loss_noreduction = tf.add(loss_en, loss_kl)
+    return loss_noreduction
+
+def sum_correct_labels(preds,labels):
+    #simply sums up the correct pairs to average later
+    acc = 0
+    for p,l in zip(preds,labels):
+        if np.argmax(p) == np.argmax(l):
+            acc += 1
+    return acc
+
+
+
+
+
+
+
+
+
+
+
+
+

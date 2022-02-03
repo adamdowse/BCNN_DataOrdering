@@ -1,39 +1,41 @@
 
 #NEED TO FINISH THIS
 def choose_func(name,df,vars):
-    match name:
-        case 'selfpaced':
-            return selfpaced_thresholded(df,vars)
-        case 'hardfirst':
-            return 
+
+    if name == 'selfpaced_threshold':
+        return selfpaced_thresholded(df,vars)
+    elif name == 'hardfirst':
+        return #ADD
+    elif name == 'normal':
+        return resample_normal(df)
     
         
-    
+#All the acquisition functions used 
 
-def selfpaced_thresholded(df):
-    global thresh
-    global dataused
-    global lam
-    df = df[df['diff'] < thresh]
-    thresh = thresh * lam
-    dataused.append(len(df.index))
-    return df
+def selfpaced_thresholded(df,vars):
+    '''
+    increase the amount of data availible based on an increasing threshold by lambda amount
+    record the amount of data used in 'dataused'
+    '''
+    df = df[df['diff'] < vars.thresh]
+    vars.thresh = vars.thresh * vars.lam
+    vars.dataused.append(len(df.index))
+    return df, vars
 
-def threshold_variance(df,epoch):
-
+def threshold_online_variance(df,vars):
+    '''
+    n epoch hold out period 
+    Reducing the threshold by lambda
+    calculating the variance based on the last 3 loss results (online)
+    '''
     #resampling set amount of data
     #calculate the variance
-    global thresh
-    global dataused
-    global lam
-    if epoch <= 3:
+    if vars.epoch <= 3:
         df = df.sample(frac=1,replace=False)
     else:
         df['var'] = df[['l1','l2','l3']].var(axis=1)
-        df = df[df['var'] > thresh]
-        thresh = thresh / lam
-
-    print(df.describe())
+        df = df[df['var'] > vars.thresh]
+        vars.thresh = vars.thresh / vars.lam
 
     return df
 

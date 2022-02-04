@@ -6,31 +6,30 @@ import Acquisition_functions as af
 import random
 
 
-def init_diffs(data_path,csv_path,typ='random'): 
+def init_diffs(labels_path,csv_path,typ='random'): 
     '''Initiate a csv with either random or uniform variables.
     data_path = where the data is to collect file locations
     csv_path = when the output saves the created dataframe
     typ = (random = create random initialisation, equal = all 1s)
 
-    returns the dataframe
+    returns the dataframe [id, label, diff, l1, l2, l3]
     '''
-    #count and list the number of file
-    f_files = [os.path.join(r,file) for r,d,f in os.walk(data_path) for file in f]
-    print('Files collected')
+    #Open csv file with data labels
+    df = pd.read_csv(labels_path)
 
     if typ=='random':
-        nums = [random.random() for i in range(len(f_files))]
+        nums = [random.random() for i in range(len(df.index))]
         print('Randoms Initilised')
     elif typ == 'equal':
-        nums = [1.0 for i in range(len(f_files))]
+        nums = [1.0 for i in range(len(df.index))]
         print('Ones Initialised')
 
-    df = pd.DataFrame(data={"img":f_files, "diff":nums, 'l1':nums, 'l2':nums,'l3':nums})
+    df['diff'] = nums
+    df['l1'] = nums
+    df['l2'] = nums
+    df['l3'] = nums
     print('Initial Dataframe Created')
-
-    #save to file
-    df.to_csv(csv_path, sep=',', index=False)
-    print('csv saved')
+    
     return df
 
 def decode_img(img,x=244,y=244):
@@ -42,58 +41,36 @@ def decode_img(img,x=244,y=244):
     return tf.image.resize(img, [x,y])#resize image (for use with alex net)
 
 @tf.function
-def get_label(file_path):
+def get_label(label,labels):
     '''
+    labels is a list of strings
     This changes the file paths that include the image labels into one hot definitions
-    currently only works with cifar data
     returns the label in one hot
     '''
-    #THINGS TO ADD
-    # - Make this more common eg add input labels as list of stings
+    out_label = [0] * len(labels)
+    for i in range(len(labels)):
+        if label == labels[i]:
+            out_label[i] = 1
+    
+    return out_label
 
-    #get the file name
-    label = tf.strings.split(file_path, os.sep)[-1]
-    label = tf.strings.split(label,'_')[-1]
-    label = tf.strings.split(label,'.')[0] #should output somthing like ('frog')
-    if label == 'airplane':
-        label = tf.constant([1,0,0,0,0,0,0,0,0,0])
-    elif label =='automobile':
-        label =tf.constant([0,1,0,0,0,0,0,0,0,0])
-    elif label == 'bird':
-        label =tf.constant([0,0,1,0,0,0,0,0,0,0])
-    elif label == 'cat':
-        label =tf.constant([0,0,0,1,0,0,0,0,0,0])
-    elif label == 'deer':
-        label =tf.constant([0,0,0,0,1,0,0,0,0,0])
-    elif label == 'dog':
-        label =tf.constant([0,0,0,0,0,1,0,0,0,0])
-    elif label == 'frog':
-        label =tf.constant([0,0,0,0,0,0,1,0,0,0])
-    elif label == 'horse':
-        label =tf.constant([0,0,0,0,0,0,0,1,0,0])
-    elif label == 'ship':
-        label =tf.constant([0,0,0,0,0,0,0,0,1,0])
-    else:
-        label =tf.constant([0,0,0,0,0,0,0,0,0,1])
 
-    return label
-
-def process_path(file_path,diff,include_extras = True):
+def process_path(id,label,diff,root,include_extras = True):
     '''
     Convert from [filename,difficulty] to [image, label, filename, difficulty]
     or to [image, label] if include extras is false
     file_path and diff is the inner variables and include extras is exteror
 
     '''
-    label = get_label(file_path)
-    img = tf.io.read_file(file_path)
+    label = get_label(label)
+    img = tf.io.read_file(root + id)
     img = decode_img(img)
     if include_extras == True:
-        return img, label, file_path, diff
+        return img, label, id, diff
     else:
         return img, label
 
-def collect_train_data(name,df,vars):
+def collect_train_data(name,df,vars,root):
     '''
     name = name of acquisition function
     df = the dataframe
@@ -104,20 +81,26 @@ def collect_train_data(name,df,vars):
     df = af.choose_func(name,df,vars)
     print('Finished Resampling')
 
-    train_ds = tf.data.Dataset.from_tensor_slices((df('img').values, df('diff').values))
+    #dataset with [id , label, diff]
+    train_ds = tf.data.Dataset.from_tensor_slices((df('id').values, df('label').values),df('diff').values)
     print('Finished Creating Dataset')
 
-    # Convert the dataset to [img,label,filename,difficulty]
-    train_ds = train_ds.map(lambda x,y :process_path(x,y,True))
+    # Convert the dataset to [img,label,id,difficulty]
+    train_ds = train_ds.map(lambda x,y,z :process_path(x,y,z,root,True))
     return train_ds
 
-def collect_test_data(path): #Output train and val datasets
-    #val dataset
-    #CHNAGE THIS TO USE OS INSTEAD OF PATHLIB
-    val_images_root = pathlib.Path(path)
-    val_ds = tf.data.Dataset.list_files(str(val_images_root/'*'))
-    val_ds = val_ds.map(lambda x, y: process_path(x,y,False))
-    return val_ds
+def split_train_test(df,test_percentage):
+    test_df = df.sample(frac=test_percentage)
+    train_df = df.drop(test_df.index)
+    return train_df, test_df
+
+def collect_test_data(df): #Output train and val datasets
+    #dataset with [id , label, diff]
+    test_ds = tf.data.Dataset.from_tensor_slices((df('id').values, df('label').values),df('diff').values)
+    
+    print('Finished Creating Dataset')
+    test_ds = test_ds.map(lambda x, y,z: process_path(x,y,z,False))
+    return test_ds
 
 def save_diffs(df,path): #Save the difficult dataframe to the csv
     df.to_csv(path, sep=',',index=True)

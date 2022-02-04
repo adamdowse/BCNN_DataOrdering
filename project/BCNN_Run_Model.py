@@ -39,25 +39,26 @@ class_names = ['Airplane','automobile','Bird','cat','Deer','Dog','Frog','Horse',
 
 class stats:
     thresh = 100
-    dataused = [0]
+    dataused = []
     lam = 1.01
-
 var = stats()
 
-
-name = 'cifar/var_threshold_t100_l1.01'
-root = '/user/HS223/ad00878/PhD/BCNN_DataOrdering/BCNN_DataOrdering'
-train_path = 'E:/OneDrive/Documents/Uni/PG/Thesis/Code/cifar/cifar/train'
-test_path = 'E:/OneDrive/Documents/Uni/PG/Thesis/Code/cifar/cifar/test' 
-saved_model_path = 'project/saved_model/test1'
-board_path = 'E:/OneDrive/Documents/Uni/PG/Thesis/Code/logs/'
+name = 'cifar/normalt1'
+root = '/home'
+train_path = root+'/data/train/train'
+test_path = root+'/data/tes' 
+saved_model_path = root+'/project/saved_model/test1'
+board_path = root + '/logs'
 
 #Randomly initalise the difficulty csv
 df = sf.init_diffs(train_path)
 print('Initalised Difficulty Dataframe')
 
+#Split Data into train and test
+train_df,test_df = sf.split_train_test(df,0.15)
+
 #Convert dataframe into datasets
-test_ds = sf.collect_test_data(test_path).shuffle(1000)
+test_ds = sf.collect_test_data(test_df).shuffle(1000)
 print('Initalising Difficulty CSV')
 
 #Load model
@@ -79,7 +80,7 @@ test_acc_metric = keras.metrics.CategoricalAccuracy()
 print('Setup Complete, Starting training')
 
 #Run the epochs
-epochs = 5
+epochs = 15
 BATCHES = 32
 
 #Tensorboard Setup
@@ -95,7 +96,7 @@ cm_summary_writer = tf.summary.create_file_writer(cm_log_dir)
 
 for epoch in range(epochs):
     
-    train_ds = sf.collect_train_data('normal',df,var).batch(BATCHES)
+    train_ds = sf.collect_train_data('normal',train_df,var).batch(BATCHES)
 
     #training step
     for i,batch in enumerate(train_ds):
@@ -103,7 +104,7 @@ for epoch in range(epochs):
             print("Batch = "+ str(i),end="\r")
         batch_loss = train_step(batch[0],batch[1])
         #update df
-        df =sf.update_diffs_v2(df,batch,batch_loss)
+        train_df =sf.update_diffs_v2(train_df,batch,batch_loss)
     
     #Tensorboard updating
     with train_summary_writer.as_default():
@@ -132,6 +133,7 @@ for epoch in range(epochs):
     #save the model
     if epoch % 10 ==0:
         model.save(saved_model_path)
+        print('Checkpoint saved')
     
 #save the diffs to seperate file
 #np.savetxt('imagecounts/'+name,dataused)

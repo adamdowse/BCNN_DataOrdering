@@ -6,7 +6,7 @@ import Acquisition_functions as af
 import random
 
 
-def init_diffs(labels_path,csv_path,typ='random'): 
+def init_diffs(labels_path,typ='random'): 
     '''Initiate a csv with either random or uniform variables.
     data_path = where the data is to collect file locations
     csv_path = when the output saves the created dataframe
@@ -40,7 +40,6 @@ def decode_img(img,x=244,y=244):
     img = tf.image.convert_image_dtype(img,tf.float32)#range between [0,1]
     return tf.image.resize(img, [x,y])#resize image (for use with alex net)
 
-@tf.function
 def get_label(label,labels):
     '''
     labels is a list of strings
@@ -49,26 +48,25 @@ def get_label(label,labels):
     '''
     out_label = [0] * len(labels)
     for i in range(len(labels)):
-        if label == labels[i]:
+        #print(label.numpy().decode())
+        #print(labels[i].numpy().decode())
+        if label.numpy().decode() == labels[i].numpy().decode():
             out_label[i] = 1
-    
+
     return out_label
 
-
-def process_path(id,label,diff,root,include_extras = True):
+def process_path(id,label,diff,root,class_names):
     '''
     Convert from [filename,difficulty] to [image, label, filename, difficulty]
     or to [image, label] if include extras is false
     file_path and diff is the inner variables and include extras is exteror
 
     '''
-    label = get_label(label)
-    img = tf.io.read_file(root + id)
+    label = get_label(label,class_names)
+    img = tf.io.read_file(root + str(id.numpy()) +'.PNG')
     img = decode_img(img)
-    if include_extras == True:
-        return img, label, id, diff
-    else:
-        return img, label
+
+    return img, label, id, diff
 
 def collect_train_data(name,df,vars,root):
     '''
@@ -82,11 +80,13 @@ def collect_train_data(name,df,vars,root):
     print('Finished Resampling')
 
     #dataset with [id , label, diff]
-    train_ds = tf.data.Dataset.from_tensor_slices((df('id').values, df('label').values),df('diff').values)
-    print('Finished Creating Dataset')
+    train_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values,df['diff'].values))
+    print('Finished Creating Train Dataset')
+
+    class_names = vars.class_names
 
     # Convert the dataset to [img,label,id,difficulty]
-    train_ds = train_ds.map(lambda x,y,z :process_path(x,y,z,root,True))
+    train_ds = train_ds.map(lambda x,y,z :tf.py_function(func=process_path,inp=[x,y,z,root,class_names],Tout=[tf.float32,tf.int32,tf.int64,tf.float64]))
     return train_ds
 
 def split_train_test(df,test_percentage):
@@ -94,12 +94,12 @@ def split_train_test(df,test_percentage):
     train_df = df.drop(test_df.index)
     return train_df, test_df
 
-def collect_test_data(df): #Output train and val datasets
+def collect_test_data(df,root,vars): 
     #dataset with [id , label, diff]
-    test_ds = tf.data.Dataset.from_tensor_slices((df('id').values, df('label').values),df('diff').values)
-    
-    print('Finished Creating Dataset')
-    test_ds = test_ds.map(lambda x, y,z: process_path(x,y,z,False))
+    test_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values,df['diff'].values))
+    test_ds = test_ds.map(lambda x,y,z :tf.py_function(func=process_path,inp=[x,y,z,root,vars.class_names],Tout=[tf.float32,tf.int32,tf.int64,tf.float64]))
+    print('Finished Creating Test Dataset')
+    #output it [img,label,id,(diff)?]
     return test_ds
 
 def save_diffs(df,path): #Save the difficult dataframe to the csv
@@ -151,6 +151,17 @@ def update_diffs_v2(df,batch,losses):
     #print(df)
     #print(df.describe())
     return df
+
+def update_diffs_v3(train_df,batch,losses):
+    #train_df = [id,label,diff,l1,l2,l3]
+    #batch = [img,label,id,diff] * batchsize
+    #losses = [losses] *batchsize
+
+    losses = losses.numpy()
+    for i,id  in enumerate(batch[2]):
+        train_df.loc[train_df['id']==id.numpy(),'diff'] =losses[i]
+
+    return train_df
 
 def new_diff_col(df):
 

@@ -11,17 +11,23 @@ import numpy as np
 import Acquisition_functions as af
 import Supporting_functions as sf
 import Models
+import time
 
 
-@tf.function
+#@tf.function
 def train_step(images, labels):
+    t = time.time()
     with tf.GradientTape() as tape:
         preds = model(images, training=True)
-        loss = loss_fn(labels, preds)
+        #loss = loss_fn(labels, preds)
         batch_loss = loss_fn_noreduction(labels,preds)
+        loss = tf.math.reduce_mean(batch_loss)
+    t1 = time.time()
+    print(t-t1)
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-
+    t2 = time.time()
+    print(t1-t2)
     train_loss(loss)
     train_acc_metric(labels, preds)
     return batch_loss
@@ -35,31 +41,35 @@ def test_step(images, labels):
     test_acc_metric(labels, preds)
 
 
-class_names = ['Airplane','automobile','Bird','cat','Deer','Dog','Frog','Horse','Ship','Truck']
+
 
 class stats:
     thresh = 100
     dataused = []
     lam = 1.01
+    class_names = ['Airplane','Automobile','Bird','Cat','Deer','Dog','Frog','Horse','Ship','Truck']
 var = stats()
 
 name = 'cifar/normalt1'
 root = '/home'
-train_path = root+'/data/train/train'
+train_path = root+'/data/train_test/train/train/'
+labels_path = root+'/data/trainLabels.csv'
 test_path = root+'/data/tes' 
 saved_model_path = root+'/project/saved_model/test1'
 board_path = root + '/logs'
 
 #Randomly initalise the difficulty csv
-df = sf.init_diffs(train_path)
+df = sf.init_diffs(labels_path)
 print('Initalised Difficulty Dataframe')
 
 #Split Data into train and test
 train_df,test_df = sf.split_train_test(df,0.15)
-
+print(train_df.head())
 #Convert dataframe into datasets
-test_ds = sf.collect_test_data(test_df).shuffle(1000)
+test_ds = sf.collect_test_data(test_df,train_path,var).shuffle(1000)
 print('Initalising Difficulty CSV')
+
+
 
 #Load model
 model = Models.AlexNet(10)
@@ -67,9 +77,10 @@ print('Model Loaded')
 
 #evaluation metrics
 optimizer = keras.optimizers.Adam(learning_rate=0.001)
-#loss_fn = keras.losses.CategoricalCrossentropy(from_logits=True)
-loss_fn = sf.elbo_loss
-loss_fn_noreduction = sf.elbo_loss_no_reduction
+loss_fn = keras.losses.CategoricalCrossentropy(from_logits=False)
+loss_fn_noreduction = keras.losses.CategoricalCrossentropy(from_logits=False,reduction=tf.keras.losses.Reduction.NONE)
+#loss_fn = sf.elbo_loss
+#loss_fn_noreduction = sf.elbo_loss_no_reduction
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_acc_metric = keras.metrics.CategoricalAccuracy()
@@ -96,15 +107,21 @@ cm_summary_writer = tf.summary.create_file_writer(cm_log_dir)
 
 for epoch in range(epochs):
     
-    train_ds = sf.collect_train_data('normal',train_df,var).batch(BATCHES)
+    train_ds = sf.collect_train_data('normal',train_df,var,train_path).batch(BATCHES)
 
     #training step
     for i,batch in enumerate(train_ds):
-        if i % 100 == 0:
-            print("Batch = "+ str(i),end="\r")
+        #if i % 100 == 0:
+        print("Batch = "+ str(i),end="\r")
+        tic = time.time()
         batch_loss = train_step(batch[0],batch[1])
+        tac = time.time()
+        print("batch loss = ",tac-tic)
         #update df
-        train_df =sf.update_diffs_v2(train_df,batch,batch_loss)
+        tic = time.time()
+        train_df =sf.update_diffs_v3(train_df,batch,batch_loss)
+        tac = time.time()
+        print("update = ",tac-tic)
     
     #Tensorboard updating
     with train_summary_writer.as_default():

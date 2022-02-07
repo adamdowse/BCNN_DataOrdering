@@ -14,20 +14,15 @@ import Models
 import time
 
 
-#@tf.function
+@tf.function
 def train_step(images, labels):
-    t = time.time()
     with tf.GradientTape() as tape:
         preds = model(images, training=True)
         #loss = loss_fn(labels, preds)
         batch_loss = loss_fn_noreduction(labels,preds)
         loss = tf.math.reduce_mean(batch_loss)
-    t1 = time.time()
-    print(t-t1)
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    t2 = time.time()
-    print(t1-t2)
     train_loss(loss)
     train_acc_metric(labels, preds)
     return batch_loss
@@ -39,9 +34,6 @@ def test_step(images, labels):
 
     test_loss(t_loss)
     test_acc_metric(labels, preds)
-
-
-
 
 class stats:
     thresh = 100
@@ -113,15 +105,9 @@ for epoch in range(epochs):
     for i,batch in enumerate(train_ds):
         #if i % 100 == 0:
         print("Batch = "+ str(i),end="\r")
-        tic = time.time()
         batch_loss = train_step(batch[0],batch[1])
-        tac = time.time()
-        print("batch loss = ",tac-tic)
         #update df
-        tic = time.time()
         train_df =sf.update_diffs_v3(train_df,batch,batch_loss)
-        tac = time.time()
-        print("update = ",tac-tic)
     
     #Tensorboard updating
     with train_summary_writer.as_default():

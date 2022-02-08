@@ -80,7 +80,7 @@ def collect_train_data(name,df,vars,root):
     print('Finished Resampling')
 
     #dataset with [id , label, diff]
-    train_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values,df['diff'].values))
+    train_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values))
     print('Finished Creating Train Dataset')
 
     class_names = vars.class_names

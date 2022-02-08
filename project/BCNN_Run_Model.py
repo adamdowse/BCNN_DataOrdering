@@ -58,7 +58,7 @@ print('Initalised Difficulty Dataframe')
 train_df,test_df = sf.split_train_test(df,0.15)
 print(train_df.head())
 #Convert dataframe into datasets
-test_ds = sf.collect_test_data(test_df,train_path,var).shuffle(1000)
+test_ds = sf.collect_test_data(test_df,train_path,var)
 print('Initalising Difficulty CSV')
 
 #Load model
@@ -92,8 +92,6 @@ cm_log_dir = board_path + name  + info + '/CM'
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 cm_summary_writer = tf.summary.create_file_writer(cm_log_dir)
-
-
 
 for epoch in range(epochs):
     

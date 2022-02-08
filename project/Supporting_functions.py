@@ -55,7 +55,7 @@ def get_label(label,labels):
 
     return out_label
 
-def process_path(id,label,diff,root,class_names):
+def process_path(id,label,root,class_names):
     '''
     Convert from [filename,difficulty] to [image, label, filename, difficulty]
     or to [image, label] if include extras is false
@@ -66,7 +66,7 @@ def process_path(id,label,diff,root,class_names):
     img = tf.io.read_file(root + str(id.numpy()) +'.png')
     img = decode_img(img)
 
-    return img, label, id, diff
+    return img, label, id
 
 def collect_train_data(name,df,vars,root):
     '''
@@ -86,7 +86,7 @@ def collect_train_data(name,df,vars,root):
     class_names = vars.class_names
 
     # Convert the dataset to [img,label,id,difficulty]
-    train_ds = train_ds.map(lambda x,y,z :tf.py_function(func=process_path,inp=[x,y,z,root,class_names],Tout=[tf.float32,tf.int32,tf.int64,tf.float64]))
+    train_ds = train_ds.map(lambda x,y :tf.py_function(func=process_path,inp=[x,y,root,class_names],Tout=[tf.float32,tf.int32,tf.int64]))
     return train_ds
 
 def split_train_test(df,test_percentage):
@@ -95,9 +95,8 @@ def split_train_test(df,test_percentage):
     return train_df, test_df
 
 def collect_test_data(df,root,vars): 
-    #dataset with [id , label, diff]
-    test_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values,df['diff'].values))
-    test_ds = test_ds.map(lambda x,y,z :tf.py_function(func=process_path,inp=[x,y,z,root,vars.class_names],Tout=[tf.float32,tf.int32,tf.int64,tf.float64]))
+    test_ds = tf.data.Dataset.from_tensor_slices((df['id'].values, df['label'].values))
+    test_ds = test_ds.map(lambda x,y :tf.py_function(func=process_path,inp=[x,y,root,vars.class_names],Tout=[tf.float32,tf.int32,tf.int64]))
     print('Finished Creating Test Dataset')
     #output it [img,label,id,(diff)?]
     return test_ds
@@ -154,7 +153,7 @@ def update_diffs_v2(df,batch,losses):
 
 def update_diffs_v3(train_df,batch,losses):
     #train_df = [id,label,diff,l1,l2,l3]
-    #batch = [img,label,id,diff] * batchsize
+    #batch = [img,label,id] * batchsize
     #losses = [losses] *batchsize
 
     losses = losses.numpy()

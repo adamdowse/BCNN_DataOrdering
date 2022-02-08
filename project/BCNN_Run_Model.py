@@ -111,8 +111,8 @@ for epoch in range(epochs):
         tf.summary.scalar('accuracy',train_acc_metric.result(), step=epoch)
     
     #test step
-    for t_images, t_labels in test_ds.batch(BATCHES):
-        test_step(t_images,t_labels)
+    for batch in test_ds.batch(BATCHES):
+        test_step(batch[0],batch[1])
     
     #Tensorboard updating
     with test_summary_writer.as_default():

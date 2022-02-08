@@ -42,7 +42,7 @@ class stats:
     class_names = ['Airplane','Automobile','Bird','Cat','Deer','Dog','Frog','Horse','Ship','Truck']
 var = stats()
 
-name = 'cifar/normalt1'
+name = '/cifar/normalt1/'
 root = '/user/HS223/ad00878'
 train_path = root+'/DataDir/CIFAR10/train_test/train/train/'
 labels_path = root+'/DataDir/CIFAR10/trainLabels.csv'

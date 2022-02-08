@@ -63,7 +63,7 @@ def process_path(id,label,diff,root,class_names):
 
     '''
     label = get_label(label,class_names)
-    img = tf.io.read_file(root + str(id.numpy()) +'.PNG')
+    img = tf.io.read_file(root + str(id.numpy()) +'.png')
     img = decode_img(img)
 
     return img, label, id, diff

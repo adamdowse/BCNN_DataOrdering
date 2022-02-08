@@ -43,12 +43,12 @@ class stats:
 var = stats()
 
 name = 'cifar/normalt1'
-root = '/home'
-train_path = root+'/data/train_test/train/train/'
-labels_path = root+'/data/trainLabels.csv'
-test_path = root+'/data/tes' 
-saved_model_path = root+'/project/saved_model/test1'
-board_path = root + '/logs'
+root = '/user/HS223/ad00878'
+train_path = root+'/DataDir/CIFAR10/train_test/train/train/'
+labels_path = root+'/DataDir/CIFAR10/trainLabels.csv'
+test_path = root+'/DataDir/CIFAR10/train_test/test/test/' 
+saved_model_path = root+'/PhD/BCNN_DataOrdering/project/saved_model/test1'
+board_path = root + '/PhD/BCNN_DataOrdering/logs'
 
 #Randomly initalise the difficulty csv
 df = sf.init_diffs(labels_path)
@@ -60,8 +60,6 @@ print(train_df.head())
 #Convert dataframe into datasets
 test_ds = sf.collect_test_data(test_df,train_path,var).shuffle(1000)
 print('Initalising Difficulty CSV')
-
-
 
 #Load model
 model = Models.AlexNet(10)
